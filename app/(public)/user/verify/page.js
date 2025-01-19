@@ -37,7 +37,8 @@ export default function VerifyEmail() {
           <span className="font-medium">{email}</span>.
         </p>
         <p className="text-gray-500 mt-4">
-          After verifying your email, please log in again to access your account.
+          After verifying your email, please log in again to access your
+          account.
         </p>
       </div>
     </section>

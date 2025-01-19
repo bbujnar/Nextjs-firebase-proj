@@ -1,13 +1,21 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { browserSessionPersistence, setPersistence, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  browserSessionPersistence,
+  setPersistence,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "@/app/lib/firebase";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 function LoginForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const [loginError, setLoginError] = useState("");
   const router = useRouter();
 
@@ -19,6 +27,7 @@ function LoginForm() {
             const user = userCredential.user;
             if (!user.emailVerified) {
               setLoginError("Email not verified. Please check your email.");
+              router.push("/user/verify");
               return;
             }
             console.log("User logged in:", user);
@@ -50,7 +59,7 @@ function LoginForm() {
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:col-span-7 lg:px-16 lg:py-12 xl:col-span-6">
           <div className="max-w-xl lg:max-w-3xl">
             <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl md:text-4xl">
-             Hello
+              Hello
             </h1>
             <p className="mt-4 leading-relaxed text-gray-500">
               Please log in to access your account.
@@ -62,9 +71,13 @@ function LoginForm() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-8 grid grid-cols-6 gap-6">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-8 grid grid-cols-6 gap-6">
               <div className="col-span-6">
-                <label htmlFor="Email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="Email"
+                  className="block text-sm font-medium text-gray-700">
                   Email
                 </label>
                 <input
@@ -84,7 +97,9 @@ function LoginForm() {
               </div>
 
               <div className="col-span-6 sm:col-span-3">
-                <label htmlFor="Password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="Password"
+                  className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
                 <input
@@ -106,8 +121,7 @@ function LoginForm() {
               <div className="col-span-6 sm:flex sm:items-center sm:gap-4">
                 <button
                   type="submit"
-                  className="inline-block shrink-0 rounded-md border border-blue-600 bg-blue-600 px-12 py-3 text-sm font-medium text-white transition hover:bg-transparent hover:text-blue-600 focus:outline-none focus:ring active:text-blue-500"
-                >
+                  className="inline-block shrink-0 rounded-md border border-blue-600 bg-blue-600 px-12 py-3 text-sm font-medium text-white transition hover:bg-transparent hover:text-blue-600 focus:outline-none focus:ring active:text-blue-500">
                   Login
                 </button>
               </div>

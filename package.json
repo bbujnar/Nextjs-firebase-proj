@@ -17,6 +17,8 @@
     "react-hook-form": "^7.54.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.7",
     "daisyui": "^4.12.14",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
