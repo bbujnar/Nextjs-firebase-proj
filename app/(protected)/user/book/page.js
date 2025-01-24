@@ -1,14 +1,16 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "@/app/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+
 export default function AddBook() {
   const auth = getAuth();
-  const user = auth.currentUser;
   const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -16,12 +18,28 @@ export default function AddBook() {
   } = useForm();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        setError("You need to be logged in to add a book.");
+        setUser(null);
+      } else {
+        setError("");
+        setUser(currentUser);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth]);
+
   const onSubmit = async (data) => {
     if (!user) {
       setError("You need to be logged in to add a book.");
-      setLoading(false);
       return;
     }
+
     try {
       await addDoc(collection(db, "books"), {
         add_date: serverTimestamp(),
@@ -37,22 +55,26 @@ export default function AddBook() {
       setError("An error occurred while adding the book.");
     }
   };
+
   return (
     <section className="bg-white min-h-screen flex items-center justify-center">
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">
           Add a New Book
         </h1>
+
         {error && (
           <div className="text-red-500 bg-red-100 p-4 rounded-md mb-4">
             {error}
           </div>
         )}
+
         {success && (
           <div className="text-green-500 bg-green-100 p-4 rounded-md mb-4">
             {success}
           </div>
         )}
+
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="grid grid-cols-1 gap-6">
@@ -71,6 +93,7 @@ export default function AddBook() {
             />
             <p className="text-red-500">{errors.isbn?.message}</p>
           </div>
+
           {/* Title */}
           <div>
             <label
@@ -86,6 +109,7 @@ export default function AddBook() {
             />
             <p className="text-red-500">{errors.title?.message}</p>
           </div>
+
           {/* Submit Button */}
           <button
             type="submit"

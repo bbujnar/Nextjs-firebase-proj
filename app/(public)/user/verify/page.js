@@ -12,17 +12,22 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (auth.currentUser) {
-      setEmail(auth.currentUser.email);
+      if (!auth.currentUser.emailVerified) {
+        setEmail(auth.currentUser.email);
 
-      signOut(auth)
-        .then(() => {
-          console.log("User signed out");
-        })
-        .catch((error) => {
-          console.error("Error signing out:", error);
-        });
+        // Wylogowanie użytkownika
+        signOut(auth)
+          .then(() => {
+            console.log("User signed out");
+          })
+          .catch((error) => {
+            console.error("Error signing out:", error);
+          });
+      } else {
+        router.push("/");
+      }
     } else {
-      redirect("/user/login");
+      router.push("/user/login");
     }
   }, [auth, router]);
 

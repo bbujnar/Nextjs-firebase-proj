@@ -22,6 +22,7 @@ function SideBar({ children }) {
             {!user &&  <li><Link href="/user/register">Register</Link></li>}
              {user &&  <li><Link href="/user/profile">Profile</Link></li>}
              {user &&  <li><Link href="/user/allBook">Books</Link></li>}
+             {user &&  <li><Link href="/user/book">Add book</Link></li>}
              {user &&  <li><Link href="/user/logout">Logout</Link></li>}
           </ul>
         </div>

@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { db } from "@/app/lib/firebase";
 import {
@@ -9,33 +10,37 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
+
 export default function Books() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [editingBook, setEditingBook] = useState(null); // Przechowuje aktualnie edytowaną książkę
-  const [newIsbn, setNewIsbn] = useState(""); // Przechowuje nowy ISBN
+  const [editingBook, setEditingBook] = useState(null);
+  const [newIsbn, setNewIsbn] = useState("");
+  const [user, setUser] = useState(null);
   const auth = getAuth();
-  const user = auth.currentUser;
   const router = useRouter();
+
   const handleAddBookClick = () => {
     router.push("./book");
   };
+
   useEffect(() => {
-    if (!user) {
-      setError("You need to be logged in to view your books.");
-      setLoading(false);
-      return;
-    }
-    const fetchBooks = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        setError("You need to be logged in to view your books.");
+        setLoading(false);
+        return;
+      }
+
+      setUser(currentUser);
+
       try {
-        // Pobieranie książek tylko zalogowanego użytkownika
         const booksCollection = collection(db, "books");
-        const userPath = `/users/${user.uid}`;
+        const userPath = `/users/${currentUser.uid}`;
         const q = query(booksCollection, where("user", "==", userPath));
-        // const q = query(booksCollection, where("user", "==", user.uid)); // Filtr na podstawie user.uid
         const booksSnapshot = await getDocs(q);
         const booksList = booksSnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -49,38 +54,45 @@ export default function Books() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchBooks();
-  }, [user]);
+    });
+
+    return () => unsubscribe();
+  }, [auth]);
+
   const handleEditClick = (book) => {
     setEditingBook(book);
-    setNewIsbn(book.isbn); // Wstępnie ustaw ISBN do edycji
+    setNewIsbn(book.isbn);
   };
+
   const handleSaveClick = async () => {
     if (!editingBook) return;
+
     try {
-      // Aktualizacja w Firestore
       const bookRef = doc(db, "books", editingBook.id);
       await updateDoc(bookRef, { isbn: newIsbn });
-      // Aktualizacja lokalnego stanu
+
       setBooks((prevBooks) =>
         prevBooks.map((book) =>
           book.id === editingBook.id ? { ...book, isbn: newIsbn } : book
         )
       );
-      setEditingBook(null); // Zakończ edycję
+
+      setEditingBook(null);
       setNewIsbn("");
     } catch (e) {
       console.error("Error updating book:", e);
       setError("Failed to update book. Please try again later.");
     }
   };
+
   if (loading) {
     return <p>Loading...</p>;
   }
+
   if (error) {
     return <p className="text-red-500">{error}</p>;
   }
+
   return (
     <section className="bg-white min-h-screen p-6">
       <div className="max-w-4xl mx-auto">

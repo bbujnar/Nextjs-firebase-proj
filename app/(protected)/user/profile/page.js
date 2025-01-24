@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { getAuth, updateProfile } from "firebase/auth";
+import { getAuth, updateProfile, onAuthStateChanged } from "firebase/auth";
 import { db } from "@/app/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function ProfileForm() {
   const auth = getAuth();
-  const user = auth.currentUser;
   const router = useRouter();
 
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -22,9 +22,9 @@ export default function ProfileForm() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      email: user?.email,
-      displayName: user?.displayName,
-      photoURL: user?.photoURL,
+      email: "",
+      displayName: "",
+      photoURL: "",
       street: "",
       city: "",
       zipCode: "",
@@ -32,27 +32,33 @@ export default function ProfileForm() {
   });
 
   useEffect(() => {
-    const fetchAddress = async () => {
-      if (!user) redirect("/user/login");
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.push("/user/login");
+      } else {
+        setUser(currentUser);
+        try {
+          const snapshot = await getDoc(doc(db, "users", currentUser.uid));
+          if (snapshot.exists()) {
+            const address = snapshot.data().address || {};
+            setValue("street", address.street || "");
+            setValue("city", address.city || "");
+            setValue("zipCode", address.zipCode || "");
+          }
 
-      try {
-        const snapshot = await getDoc(doc(db, "users", user.uid));
-        if (snapshot.exists()) {
-          const address = snapshot.data().address || {};
-          setValue("street", address.street || "");
-          setValue("city", address.city || "");
-          setValue("zipCode", address.zipCode || "");
+          setValue("email", currentUser.email || "");
+          setValue("displayName", currentUser.displayName || "");
+          setValue("photoURL", currentUser.photoURL || "");
+        } catch (e) {
+          console.error("Error fetching address:", e);
+          setError("Failed to load user address.");
         }
-      } catch (e) {
-        console.error("Error fetching address:", e);
-        setError("Failed to load user address.");
-      } finally {
-        setLoading(false); // Wyłącz ładowanie niezależnie od wyniku
       }
-    };
+      setLoading(false);
+    });
 
-    fetchAddress();
-  }, [user, setValue]);
+    return () => unsubscribe();
+  }, [auth, router, setValue]);
 
   const onSubmit = async (data) => {
     if (!user) {
@@ -61,13 +67,11 @@ export default function ProfileForm() {
     }
 
     try {
-      // Aktualizacja profilu użytkownika
       await updateProfile(user, {
         displayName: data.displayName,
         photoURL: data.photoURL,
       });
 
-      // Aktualizacja adresu w Firestore
       await setDoc(doc(db, "users", user.uid), {
         address: {
           street: data.street,
@@ -77,7 +81,7 @@ export default function ProfileForm() {
       });
 
       setError("");
-      router.push("/"); // Przekierowanie na stronę główną
+      router.push("/");
     } catch (e) {
       console.error("Error updating profile:", e);
       setError("Failed to update profile.");
@@ -85,16 +89,22 @@ export default function ProfileForm() {
   };
 
   if (loading) {
-    return <p>Loading...</p>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <p className="text-gray-500 text-xl">Loading...</p>
+      </div>
+    );
   }
 
   return (
-    <section className="bg-white min-h-screen flex items-center justify-center">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h1>
+    <section className="bg-gray-100 min-h-screen flex items-center justify-center">
+      <div className="bg-white p-8 shadow-lg rounded-lg w-full max-w-lg">
+        <h1 className="text-3xl font-semibold text-gray-900 mb-6 text-center">
+          Edit Profile
+        </h1>
 
         {error && (
-          <div className="text-red-500 bg-red-100 p-4 rounded-md mb-4">
+          <div className="text-red-700 bg-red-100 border border-red-400 p-4 rounded-md mb-4">
             {error}
           </div>
         )}
@@ -115,9 +125,11 @@ export default function ProfileForm() {
               })}
               type="text"
               id="displayName"
-              className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-red-500">{errors.displayName?.message}</p>
+            <p className="text-sm text-red-500">
+              {errors.displayName?.message}
+            </p>
           </div>
 
           {/* Email */}
@@ -132,7 +144,7 @@ export default function ProfileForm() {
               type="email"
               id="email"
               readOnly
-              className="mt-1 w-full rounded-md border-gray-200 bg-gray-100 text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-200 bg-gray-100 text-sm text-gray-700 shadow-sm"
             />
           </div>
 
@@ -147,12 +159,12 @@ export default function ProfileForm() {
               {...register("photoURL", { required: "Photo URL is required" })}
               type="url"
               id="photoURL"
-              className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-red-500">{errors.photoURL?.message}</p>
+            <p className="text-sm text-red-500">{errors.photoURL?.message}</p>
           </div>
 
-          {/* Address - Street */}
+          {/* Address fields */}
           <div>
             <label
               htmlFor="street"
@@ -163,12 +175,11 @@ export default function ProfileForm() {
               {...register("street", { required: "Street is required" })}
               type="text"
               id="street"
-              className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-red-500">{errors.street?.message}</p>
+            <p className="text-sm text-red-500">{errors.street?.message}</p>
           </div>
 
-          {/* Address - City */}
           <div>
             <label
               htmlFor="city"
@@ -179,12 +190,11 @@ export default function ProfileForm() {
               {...register("city", { required: "City is required" })}
               type="text"
               id="city"
-              className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-red-500">{errors.city?.message}</p>
+            <p className="text-sm text-red-500">{errors.city?.message}</p>
           </div>
 
-          {/* Address - ZIP Code */}
           <div>
             <label
               htmlFor="zipCode"
@@ -195,15 +205,14 @@ export default function ProfileForm() {
               {...register("zipCode", { required: "ZIP Code is required" })}
               type="text"
               id="zipCode"
-              className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+              className="mt-1 w-full rounded-lg border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-red-500">{errors.zipCode?.message}</p>
+            <p className="text-sm text-red-500">{errors.zipCode?.message}</p>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
-            className="w-full rounded-md border border-blue-600 bg-blue-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-transparent hover:text-blue-600 focus:outline-none focus:ring active:text-blue-500">
+            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-200">
             Save Changes
           </button>
         </form>

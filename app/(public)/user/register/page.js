@@ -1,23 +1,34 @@
 "use client";
 
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
 import { useAuth } from "@/app/lib/AuthContext";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { redirect, useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function RegisterForm() {
   const { user } = useAuth();
   const auth = getAuth();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
+  const [registerError, setRegisterError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm();
   if (user) {
-    return null; 
+    return null;
+    router.push("/");
   }
-
-  const [registerError, setRegisterError] = useState(""); // Stan błędów rejestracji
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
-
   const onSubmit = (data) => {
     if (data.password !== data.confirmPassword) {
       setRegisterError("Passwords do not match.");
@@ -28,16 +39,15 @@ export default function RegisterForm() {
       .then((userCredential) => {
         console.log("User registered!");
 
-        sendEmailVerification(auth.currentUser)
-          .then(() => {
-            console.log("Email verification sent!");
-            signOut(auth).then(() => {
-              redirect("/user/verify");
-            });
+        sendEmailVerification(auth.currentUser).then(() => {
+          console.log("Email verification sent!");
+          signOut(auth).then(() => {
+            router.push("/user/verify");
           });
+        });
       })
       .catch((error) => {
-        setRegisterError(error.message); 
+        setRegisterError(error.message);
         console.log(error);
       });
   };
@@ -65,9 +75,13 @@ export default function RegisterForm() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-8 grid grid-cols-6 gap-6">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-8 grid grid-cols-6 gap-6">
               <div className="col-span-6">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700">
                   Email
                 </label>
                 <input
@@ -75,8 +89,8 @@ export default function RegisterForm() {
                     required: "Email is required",
                     pattern: {
                       value: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
-                      message: "Invalid email format"
-                    }
+                      message: "Invalid email format",
+                    },
                   })}
                   type="email"
                   id="email"
@@ -86,7 +100,9 @@ export default function RegisterForm() {
               </div>
 
               <div className="col-span-6 sm:col-span-3">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
                 <input
@@ -94,8 +110,8 @@ export default function RegisterForm() {
                     required: "Password is required",
                     minLength: {
                       value: 6,
-                      message: "Password must be at least 6 characters"
-                    }
+                      message: "Password must be at least 6 characters",
+                    },
                   })}
                   type="password"
                   id="password"
@@ -105,27 +121,36 @@ export default function RegisterForm() {
               </div>
 
               <div className="col-span-6 sm:col-span-3">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700">
                   Confirm Password
                 </label>
                 <input
                   {...register("confirmPassword", {
                     required: "Confirm Password is required",
-                    validate: (value) => value === watch("password") || "Passwords do not match"
+                    validate: (value) =>
+                      value === watch("password") || "Passwords do not match",
                   })}
                   type="password"
                   id="confirmPassword"
                   className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
                 />
-                <p className="text-red-500">{errors.confirmPassword?.message}</p>
+                <p className="text-red-500">
+                  {errors.confirmPassword?.message}
+                </p>
               </div>
 
               <div className="col-span-6 sm:flex sm:items-center sm:gap-4">
                 <button
                   type="submit"
-                  className="inline-block shrink-0 rounded-md border border-blue-600 bg-blue-600 px-12 py-3 text-sm font-medium text-white transition hover:bg-transparent hover:text-blue-600 focus:outline-none focus:ring active:text-blue-500"
-                >
-                  Register
+                  className={`inline-block shrink-0 rounded-md border px-12 py-3 text-sm font-medium transition ${
+                    isLoading
+                      ? "border-gray-400 bg-gray-400 text-white cursor-not-allowed"
+                      : "border-blue-600 bg-blue-600 text-white hover:bg-transparent hover:text-blue-600"
+                  }`}
+                  disabled={isLoading}>
+                  {isLoading ? "Registering..." : "Register"}
                 </button>
               </div>
             </form>
