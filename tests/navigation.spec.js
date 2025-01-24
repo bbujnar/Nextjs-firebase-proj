@@ -6,5 +6,5 @@ test("has link do login page", async ({ page }) => {
   // Sprawdzenie, czy została otwarta strona ze ścieżką do formularza logowania
   expect(page).toHaveURL("http://localhost:3000/user/login");
   // Sprawdzenie, czy na stronie logowania jest nagłówek z tekstem Hello
-  await expect(page.locator("h1")).toContainText("Hello");
+  await expect(page.locator("h1")).toContainText("Login to app");
 });

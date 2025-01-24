@@ -28,6 +28,6 @@ test.describe("Test procesu logowania i dostępu do profilu użytkownika", () =>
     await page.goto(profileUrl);
 
     await expect(page).toHaveURL(loginUrl);
-    await expect(page.locator("h1")).toContainText("Hello");
+    await expect(page.locator("h1")).toContainText("Login to app");
   });
 });
