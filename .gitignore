@@ -40,6 +40,13 @@ yarn-error.log*
 next-env.d.ts
 
 # Playwright
+
+# firebase
+.firebase/
+.firebaserc
+firebase.json
+
+
 node_modules/
 /test-results/
 /playwright-report/
